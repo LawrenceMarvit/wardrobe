@@ -1,15 +1,16 @@
-﻿"use client";
+"use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { addItem } from "@/lib/wardrobeStore";
+import { useState } from "react";
+import { insertItem } from "@/lib/wardrobeApi";
+import type { Confidence } from "@/lib/wardrobeStore";
 
 export default function AddItemPage() {
   const router = useRouter();
 
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("");
-  const [confidence, setConfidence] = useState<"low" | "medium" | "high">("medium");
+  const [confidence, setConfidence] = useState<Confidence>("medium");
   const [isPublic, setIsPublic] = useState(false);
   const [isLoanable, setIsLoanable] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -21,16 +22,16 @@ export default function AddItemPage() {
     setSaving(true);
 
     try {
-      addItem({
+      await insertItem({
         title: title.trim(),
         category: category.trim(),
         confidence,
-        isPublic,
-        isLoanable,
+        is_public: isPublic,
+        is_loanable: isLoanable,
       });
 
       router.push("/wardrobe");
-    } catch (err) {
+    } catch {
       setError("Failed to add item");
     } finally {
       setSaving(false);
@@ -56,9 +57,7 @@ export default function AddItemPage() {
 
         <select
           value={confidence}
-          onChange={(e) =>
-            setConfidence(e.target.value as "low" | "medium" | "high")
-          }
+          onChange={(e) => setConfidence(e.target.value as Confidence)}
         >
           <option value="low">low</option>
           <option value="medium">medium</option>
@@ -83,7 +82,7 @@ export default function AddItemPage() {
           Loanable
         </label>
 
-        {error && <div style={{ color: "red" }}>{error}</div>}
+        {error && <div style={{ color: "crimson" }}>{error}</div>}
 
         <button type="submit" disabled={saving}>
           {saving ? "Saving..." : "Save"}
