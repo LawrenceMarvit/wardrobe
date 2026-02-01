@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabaseClient";
 
+
 export async function loadItems() {
   const { data, error } = await supabase
     .from("wardrobe_items")
