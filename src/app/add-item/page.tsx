@@ -1,109 +1,92 @@
-"use client";
+﻿"use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { addItem } from "@/lib/wardrobeStore";
-
-type Confidence = "low" | "medium" | "high";
 
 export default function AddItemPage() {
   const router = useRouter();
 
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("");
-  const [confidence, setConfidence] = useState<Confidence>("medium");
+  const [confidence, setConfidence] = useState<"low" | "medium" | "high">("medium");
   const [isPublic, setIsPublic] = useState(false);
   const [isLoanable, setIsLoanable] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
-  const isValid = useMemo(() => {
-    return title.trim().length > 0 && category.trim().length > 0;
-  }, [title, category]);
-
-  async function onSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!isValid) return;
+    setError("");
+    setSaving(true);
 
-    await addItem({
-      title: title.trim(),
-      category: category.trim(),
-      confidence,
-      is_public: isPublic,
-      is_loanable: isLoanable,
-    });
+    try {
+      addItem({
+        title: title.trim(),
+        category: category.trim(),
+        confidence,
+        isPublic,
+        isLoanable,
+      });
 
-    router.push("/wardrobe");
+      router.push("/wardrobe");
+    } catch (err) {
+      setError("Failed to add item");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
-    <div style={{ maxWidth: 640, margin: "0 auto", padding: 24 }}>
-      <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 16 }}>
-        Add item
-      </h1>
+    <div style={{ maxWidth: 500, margin: "40px auto", fontFamily: "sans-serif" }}>
+      <h1>Add Item</h1>
 
-      <form onSubmit={onSubmit} style={{ display: "grid", gap: 12 }}>
-        <label style={{ display: "grid", gap: 6 }}>
-          <span>Title</span>
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g. Black hoodie"
-            style={{ padding: 10, borderRadius: 8, border: "1px solid #333" }}
-          />
-        </label>
+      <form onSubmit={handleSubmit} style={{ display: "grid", gap: 12 }}>
+        <input
+          placeholder="Title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+        />
 
-        <label style={{ display: "grid", gap: 6 }}>
-          <span>Category</span>
-          <input
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            placeholder="e.g. Tops"
-            style={{ padding: 10, borderRadius: 8, border: "1px solid #333" }}
-          />
-        </label>
+        <input
+          placeholder="Category"
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+        />
 
-        <label style={{ display: "grid", gap: 6 }}>
-          <span>Confidence</span>
-          <select
-            value={confidence}
-            onChange={(e) => setConfidence(e.target.value as Confidence)}
-            style={{ padding: 10, borderRadius: 8, border: "1px solid #333" }}
-          >
-            <option value="low">low</option>
-            <option value="medium">medium</option>
-            <option value="high">high</option>
-          </select>
-        </label>
+        <select
+          value={confidence}
+          onChange={(e) =>
+            setConfidence(e.target.value as "low" | "medium" | "high")
+          }
+        >
+          <option value="low">low</option>
+          <option value="medium">medium</option>
+          <option value="high">high</option>
+        </select>
 
-        <label style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        <label>
           <input
             type="checkbox"
             checked={isPublic}
             onChange={(e) => setIsPublic(e.target.checked)}
           />
-          <span>Public</span>
+          Public
         </label>
 
-        <label style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        <label>
           <input
             type="checkbox"
             checked={isLoanable}
             onChange={(e) => setIsLoanable(e.target.checked)}
           />
-          <span>Loanable</span>
+          Loanable
         </label>
 
-        <button
-          type="submit"
-          disabled={!isValid}
-          style={{
-            padding: 12,
-            borderRadius: 10,
-            border: "1px solid #333",
-            cursor: isValid ? "pointer" : "not-allowed",
-            opacity: isValid ? 1 : 0.6,
-          }}
-        >
-          Save
+        {error && <div style={{ color: "red" }}>{error}</div>}
+
+        <button type="submit" disabled={saving}>
+          {saving ? "Saving..." : "Save"}
         </button>
       </form>
     </div>
