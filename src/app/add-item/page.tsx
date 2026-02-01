@@ -2,156 +2,110 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { addItem, Confidence } from "@/lib/wardrobeStore";
+import { addItem } from "@/lib/wardrobeStore";
+
+type Confidence = "low" | "medium" | "high";
 
 export default function AddItemPage() {
   const router = useRouter();
 
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("");
-  const [confidence, setConfidence] = useState<Confidence>("Likely");
+  const [confidence, setConfidence] = useState<Confidence>("medium");
   const [isPublic, setIsPublic] = useState(false);
   const [isLoanable, setIsLoanable] = useState(false);
 
-  const [error, setError] = useState<string | null>(null);
-
-  const canSave = useMemo(() => {
+  const isValid = useMemo(() => {
     return title.trim().length > 0 && category.trim().length > 0;
   }, [title, category]);
 
-  function onSave() {
-    setError(null);
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!isValid) return;
 
-    if (!canSave) {
-      setError("Please add a title and category.");
-      return;
-    }
-
-    addItem({
+    await addItem({
       title: title.trim(),
       category: category.trim(),
       confidence,
-      isPublic,
-      isLoanable,
+      is_public: isPublic,
+      is_loanable: isLoanable,
     });
 
     router.push("/wardrobe");
   }
 
   return (
-    <main className="min-h-screen bg-neutral-950 text-white">
-      <div className="mx-auto w-full max-w-md px-4 py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-semibold">Add an item</h1>
-          <p className="mt-1 text-sm text-neutral-400">
-            Add basics first. Photos + AI come next.
-          </p>
-        </div>
+    <div style={{ maxWidth: 640, margin: "0 auto", padding: 24 }}>
+      <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 16 }}>
+        Add item
+      </h1>
 
-        <div className="space-y-4 rounded-2xl bg-neutral-900 p-5 shadow">
-          <div>
-            <label className="text-sm text-neutral-300">Title</label>
-            <input
-              className="mt-2 w-full rounded-xl bg-neutral-800 px-4 py-3 text-sm outline-none ring-1 ring-neutral-700 focus:ring-2"
-              placeholder="e.g. Vintage jacket"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-          </div>
+      <form onSubmit={onSubmit} style={{ display: "grid", gap: 12 }}>
+        <label style={{ display: "grid", gap: 6 }}>
+          <span>Title</span>
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="e.g. Black hoodie"
+            style={{ padding: 10, borderRadius: 8, border: "1px solid #333" }}
+          />
+        </label>
 
-          <div>
-            <label className="text-sm text-neutral-300">Category</label>
-            <input
-              className="mt-2 w-full rounded-xl bg-neutral-800 px-4 py-3 text-sm outline-none ring-1 ring-neutral-700 focus:ring-2"
-              placeholder="e.g. Outerwear"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-            />
-          </div>
+        <label style={{ display: "grid", gap: 6 }}>
+          <span>Category</span>
+          <input
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            placeholder="e.g. Tops"
+            style={{ padding: 10, borderRadius: 8, border: "1px solid #333" }}
+          />
+        </label>
 
-          <div>
-            <label className="text-sm text-neutral-300">Confidence</label>
-            <select
-              className="mt-2 w-full rounded-xl bg-neutral-800 px-4 py-3 text-sm outline-none ring-1 ring-neutral-700 focus:ring-2"
-              value={confidence}
-              onChange={(e) => setConfidence(e.target.value as Confidence)}
-            >
-              <option value="Likely">Likely</option>
-              <option value="Speculative">Speculative</option>
-              <option value="Unknown">Unknown</option>
-            </select>
-          </div>
+        <label style={{ display: "grid", gap: 6 }}>
+          <span>Confidence</span>
+          <select
+            value={confidence}
+            onChange={(e) => setConfidence(e.target.value as Confidence)}
+            style={{ padding: 10, borderRadius: 8, border: "1px solid #333" }}
+          >
+            <option value="low">low</option>
+            <option value="medium">medium</option>
+            <option value="high">high</option>
+          </select>
+        </label>
 
-          <div className="flex items-center justify-between rounded-xl bg-neutral-800 px-4 py-3 ring-1 ring-neutral-700">
-            <div>
-              <div className="text-sm font-medium">Public</div>
-              <div className="text-xs text-neutral-400">Visible to others</div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setIsPublic((v) => !v)}
-              className={`h-7 w-12 rounded-full p-1 transition ${
-                isPublic ? "bg-white" : "bg-neutral-700"
-              }`}
-              aria-pressed={isPublic}
-            >
-              <div
-                className={`h-5 w-5 rounded-full transition ${
-                  isPublic ? "translate-x-5 bg-neutral-950" : "translate-x-0 bg-white"
-                }`}
-              />
-            </button>
-          </div>
+        <label style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <input
+            type="checkbox"
+            checked={isPublic}
+            onChange={(e) => setIsPublic(e.target.checked)}
+          />
+          <span>Public</span>
+        </label>
 
-          <div className="flex items-center justify-between rounded-xl bg-neutral-800 px-4 py-3 ring-1 ring-neutral-700">
-            <div>
-              <div className="text-sm font-medium">Loanable</div>
-              <div className="text-xs text-neutral-400">Okay to lend</div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setIsLoanable((v) => !v)}
-              className={`h-7 w-12 rounded-full p-1 transition ${
-                isLoanable ? "bg-white" : "bg-neutral-700"
-              }`}
-              aria-pressed={isLoanable}
-            >
-              <div
-                className={`h-5 w-5 rounded-full transition ${
-                  isLoanable ? "translate-x-5 bg-neutral-950" : "translate-x-0 bg-white"
-                }`}
-              />
-            </button>
-          </div>
+        <label style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <input
+            type="checkbox"
+            checked={isLoanable}
+            onChange={(e) => setIsLoanable(e.target.checked)}
+          />
+          <span>Loanable</span>
+        </label>
 
-          {error && (
-            <div className="rounded-xl bg-red-950/40 px-4 py-3 text-sm text-red-200 ring-1 ring-red-900">
-              {error}
-            </div>
-          )}
-
-          <div className="pt-2 space-y-3">
-            <button
-              onClick={onSave}
-              disabled={!canSave}
-              className={`w-full rounded-xl px-4 py-3 text-sm font-medium transition ${
-                canSave
-                  ? "bg-white text-neutral-950"
-                  : "bg-neutral-700 text-neutral-300 cursor-not-allowed"
-              }`}
-            >
-              Save item
-            </button>
-
-            <button
-              onClick={() => router.push("/wardrobe")}
-              className="w-full rounded-xl bg-neutral-800 px-4 py-3 text-sm text-neutral-200 ring-1 ring-neutral-700"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      </div>
-    </main>
+        <button
+          type="submit"
+          disabled={!isValid}
+          style={{
+            padding: 12,
+            borderRadius: 10,
+            border: "1px solid #333",
+            cursor: isValid ? "pointer" : "not-allowed",
+            opacity: isValid ? 1 : 0.6,
+          }}
+        >
+          Save
+        </button>
+      </form>
+    </div>
   );
 }
