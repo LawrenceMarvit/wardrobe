@@ -1,32 +1,90 @@
+"use client";
+
+import { useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
+
 export default function LoginPage() {
-    return (
-      <main className="min-h-screen flex items-center justify-center bg-neutral-950">
-        <div className="w-full max-w-sm rounded-xl bg-neutral-900 p-6 shadow">
-          <h1 className="text-2xl font-semibold mb-2 text-white">
-            Welcome back
-          </h1>
-          <p className="text-sm text-neutral-400 mb-6">
-            Let’s build your digital wardrobe.
-          </p>
-  
-          <label className="block text-sm mb-2 text-neutral-300">
-            Email
-          </label>
-          <input
-            type="email"
-            placeholder="you@example.com"
-            className="w-full rounded-lg bg-neutral-800 px-3 py-2 mb-4 text-white"
-          />
-  
-          <button className="w-full rounded-lg bg-white text-black py-2 font-medium">
-            Send me a login link
-          </button>
-  
-          <p className="text-xs text-neutral-500 mt-4">
-            No password. We’ll email you a secure sign-in link.
-          </p>
-        </div>
-      </main>
-    );
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function sendMagicLink(e: React.FormEvent) {
+    e.preventDefault();
+    setStatus(null);
+    setLoading(true);
+
+    try {
+      const redirectTo =
+        typeof window !== "undefined"
+          ? `${window.location.origin}/wardrobe`
+          : "http://localhost:3000/wardrobe";
+
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: redirectTo,
+        },
+      });
+
+      if (error) throw error;
+
+      setStatus("✅ Login link sent. Check your email (and spam folder).");
+    } catch (err: any) {
+      // This is the IMPORTANT part: it will reveal why it isn't sending
+      setStatus(`❌ ${err?.message ?? "Failed to send login link"}`);
+      console.error("Magic link error:", err);
+    } finally {
+      setLoading(false);
+    }
   }
-  
+
+  return (
+    <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 24 }}>
+      <form onSubmit={sendMagicLink} style={{ width: 420, maxWidth: "100%" }}>
+        <h1 style={{ fontSize: 32, fontWeight: 800, marginBottom: 8 }}>Welcome back</h1>
+        <p style={{ opacity: 0.7, marginBottom: 18 }}>We’ll email you a secure sign-in link.</p>
+
+        <label style={{ display: "block", marginBottom: 8 }}>Email</label>
+        <input
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="you@example.com"
+          type="email"
+          required
+          style={{
+            width: "100%",
+            padding: 12,
+            borderRadius: 10,
+            border: "1px solid #333",
+            background: "#111",
+            color: "white",
+            marginBottom: 12,
+          }}
+        />
+
+        <button
+          type="submit"
+          disabled={loading}
+          style={{
+            width: "100%",
+            padding: 12,
+            borderRadius: 10,
+            border: "1px solid #333",
+            background: "white",
+            color: "black",
+            fontWeight: 700,
+            cursor: "pointer",
+          }}
+        >
+          {loading ? "Sending..." : "Send me a login link"}
+        </button>
+
+        {status && (
+          <div style={{ marginTop: 14, padding: 12, borderRadius: 10, border: "1px solid #333" }}>
+            {status}
+          </div>
+        )}
+      </form>
+    </div>
+  );
+}
