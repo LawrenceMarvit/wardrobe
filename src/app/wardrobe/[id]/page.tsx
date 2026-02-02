@@ -1,66 +1,55 @@
+"use client";
+
 import Link from "next/link";
-import { supabase } from "@/lib/supabaseClient";
+import { useEffect, useMemo, useState } from "react";
+import { useParams } from "next/navigation";
+import { getItemById, type ClothingItem } from "@/lib/wardrobeStore";
 
-type WardrobeItem = {
-  id: string;
-  title: string;
-  category: string;
-  confidence: string;
-  is_public: boolean;
-  is_loanable: boolean;
-  created_at: string;
-};
+export default function WardrobeItemPage() {
+  const params = useParams<{ id: string }>();
+  const id = useMemo(
+    () => (params?.id ? decodeURIComponent(params.id) : ""),
+    [params]
+  );
 
-type ParamsMaybePromise = { id?: string } | Promise<{ id?: string }>;
+  const [item, setItem] = useState<ClothingItem | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-export default async function WardrobeItemPage(props: { params: ParamsMaybePromise }) {
-  // Next.js versions differ: params may be an object OR a Promise
-  const params = await props.params;
-  const rawId = params?.id;
+  useEffect(() => {
+    let cancelled = false;
 
-  if (!rawId) {
-    return (
-      <div style={{ padding: 24, maxWidth: 900, margin: "0 auto" }}>
-        <Link href="/wardrobe" style={{ textDecoration: "none" }}>
-          ← Back
-        </Link>
-        <h1 style={{ marginTop: 16 }}>Item not found</h1>
-        <pre style={{ whiteSpace: "pre-wrap", color: "crimson" }}>
-          {JSON.stringify({ message: "Route param 'id' was missing", params }, null, 2)}
-        </pre>
-      </div>
-    );
-  }
+    async function run() {
+      try {
+        setLoading(true);
+        setError(null);
 
-  const id = decodeURIComponent(rawId);
+        if (!id) {
+          throw new Error("Missing item id in route.");
+        }
 
-  const { data, error } = await supabase
-    .from("wardrobe_items")
-    .select("*")
-    .eq("id", id)
-    .single();
+        const found = await getItemById(id);
 
-  if (error) {
-    return (
-      <div style={{ padding: 24, maxWidth: 900, margin: "0 auto" }}>
-        <Link href="/wardrobe" style={{ textDecoration: "none" }}>
-          ← Back
-        </Link>
+        if (!cancelled) {
+          setItem(found ?? null);
+        }
+      } catch (e: any) {
+        if (!cancelled) {
+          setError(e?.message ?? "Failed to load item.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
 
-        <h1 style={{ marginTop: 16 }}>Item not found</h1>
+    run();
 
-        <pre style={{ whiteSpace: "pre-wrap", color: "crimson" }}>
-          {JSON.stringify(error, null, 2)}
-        </pre>
-
-        <div style={{ marginTop: 12, opacity: 0.8 }}>
-          Tried to load item id: <b>{id}</b>
-        </div>
-      </div>
-    );
-  }
-
-  const item = data as WardrobeItem;
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
   return (
     <div style={{ padding: 24, maxWidth: 900, margin: "0 auto" }}>
@@ -68,39 +57,26 @@ export default async function WardrobeItemPage(props: { params: ParamsMaybePromi
         ← Back
       </Link>
 
-      <h1 style={{ fontSize: 42, fontWeight: 900, marginTop: 16 }}>
-        {item.title}
-      </h1>
+      {loading && <p style={{ marginTop: 16 }}>Loading…</p>}
 
-      <div
-        style={{
-          marginTop: 18,
-          border: "1px solid #333",
-          borderRadius: 12,
-          padding: 16,
-          display: "grid",
-          gap: 10,
-        }}
-      >
-        <div>
-          <b>Category:</b> {item.category}
-        </div>
-        <div>
-          <b>Confidence:</b> {item.confidence}
-        </div>
-        <div>
-          <b>Public:</b> {item.is_public ? "Yes" : "No"}
-        </div>
-        <div>
-          <b>Loanable:</b> {item.is_loanable ? "Yes" : "No"}
-        </div>
-        <div>
-          <b>Created:</b> {new Date(item.created_at).toLocaleString()}
-        </div>
-        <div style={{ fontSize: 12, opacity: 0.75 }}>
-          <b>ID:</b> {item.id}
-        </div>
-      </div>
+      {!loading && error && (
+        <p style={{ marginTop: 16, color: "crimson" }}>{error}</p>
+      )}
+
+      {!loading && !error && !item && (
+        <p style={{ marginTop: 16 }}>Item not found.</p>
+      )}
+
+      {!loading && !error && item && (
+        <>
+          <h1 style={{ marginTop: 16 }}>Item</h1>
+          <div style={{ marginTop: 12 }}>
+            <pre style={{ whiteSpace: "pre-wrap" }}>
+              {JSON.stringify(item, null, 2)}
+            </pre>
+          </div>
+        </>
+      )}
     </div>
   );
 }
