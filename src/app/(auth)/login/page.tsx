@@ -1,48 +1,66 @@
 'use client'
 
-import { useState } from 'react'
-import { createClient } from '@supabase/supabase-js'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabaseClient'
 
 export default function LoginPage() {
+  const router = useRouter()
   const [email, setEmail] = useState('')
-  const [message, setMessage] = useState('')
+  const [status, setStatus] = useState<string>('')
 
-  const handleLogin = async (e: React.FormEvent) => {
+  // If a magic-link lands on /login, this will finish login automatically.
+  useEffect(() => {
+    const finish = async () => {
+      try {
+        const { data, error } = await supabase.auth.getSessionFromUrl({ storeSession: true })
+        if (!error && data?.session) {
+          router.replace('/wardrobe')
+        }
+      } catch {
+        // ignore
+      }
+    }
+    finish()
+  }, [router])
+
+  const sendMagicLink = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
+    setStatus('Sending magic link...')
 
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: 'https://wardrobe-mm5f.vercel.app/auth/callback',
+        // Always send the email link back to your callback page on the same site
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     })
 
     if (error) {
-      setMessage(error.message)
-    } else {
-      setMessage('Magic link sent. Check your email.')
+      setStatus(`Error: ${error.message}`)
+      return
     }
+
+    setStatus('Check your email and click the link.')
   }
 
   return (
-    <div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh',flexDirection:'column'}}>
-      <form onSubmit={handleLogin}>
+    <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
+      <form onSubmit={sendMagicLink} style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
         <input
           type="email"
           placeholder="you@email.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          style={{ padding: 10, width: 260 }}
           required
-          style={{padding:10,marginRight:10}}
         />
-        <button type="submit">Send Magic Link</button>
+        <button type="submit" style={{ padding: '10px 16px' }}>
+          Send Magic Link
+        </button>
       </form>
-      <p>{message}</p>
+
+      <div style={{ marginTop: 16, opacity: 0.8 }}>{status}</div>
     </div>
   )
 }
