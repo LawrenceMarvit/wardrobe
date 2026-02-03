@@ -1,26 +1,28 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-const supabase = createClient(supabaseUrl, supabaseAnonKey)
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabaseClient'
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('')
-  const [msg, setMsg] = useState('')
+  const router = useRouter()
+  const supabase = createClient()
 
-  async function handleLogin(e: React.FormEvent) {
+  const [email, setEmail] = useState('')
+  const [msg, setMsg] = useState<string>('')
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setMsg('Sending magic link...')
 
-    const redirectTo = `${window.location.origin}/auth/callback`
+    const origin =
+      typeof window !== 'undefined' ? window.location.origin : 'https://wardrobe-mm5f.vercel.app'
 
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: redirectTo,
+        // THIS IS THE IMPORTANT PART:
+        emailRedirectTo: `${origin}/auth/callback`,
       },
     })
 
@@ -29,7 +31,7 @@ export default function LoginPage() {
       return
     }
 
-    setMsg(`Sent! Check your email. (It should go to: ${redirectTo})`)
+    setMsg('Check your email and click the link.')
   }
 
   return (
@@ -37,16 +39,16 @@ export default function LoginPage() {
       <form onSubmit={handleLogin} style={{ display: 'grid', gap: 12 }}>
         <input
           type="email"
-          value={email}
           placeholder="you@email.com"
+          value={email}
           onChange={(e) => setEmail(e.target.value)}
-          style={{ padding: 10, width: 320 }}
           required
+          style={{ padding: 10, minWidth: 280 }}
         />
         <button type="submit" style={{ padding: 10 }}>
           Send Magic Link
         </button>
-        <div style={{ opacity: 0.8 }}>{msg}</div>
+        {msg ? <div style={{ opacity: 0.8 }}>{msg}</div> : null}
       </form>
     </div>
   )
