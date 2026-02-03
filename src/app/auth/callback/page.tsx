@@ -1,37 +1,22 @@
-"use client";
+'use client'
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@supabase/supabase-js'
 
-export default function AuthCallbackPage() {
-  const router = useRouter();
+export default function AuthCallback() {
+  const router = useRouter()
 
   useEffect(() => {
-    async function run() {
-      const code = new URLSearchParams(window.location.search).get("code");
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
 
-      if (!code) {
-        router.replace("/login");
-        return;
-      }
+    supabase.auth.getSession().then(() => {
+      router.push('/wardrobe')
+    })
+  }, [router])
 
-      const { error } = await supabase.auth.exchangeCodeForSession(code);
-
-      if (error) {
-        router.replace("/login");
-        return;
-      }
-
-      router.replace("/wardrobe");
-    }
-
-    run();
-  }, [router]);
-
-  return (
-    <div style={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
-      Logging you in…
-    </div>
-  );
+  return <p>Logging you in…</p>
 }
