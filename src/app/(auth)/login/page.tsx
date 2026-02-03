@@ -1,54 +1,53 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabaseClient'
 
 export default function LoginPage() {
-  const router = useRouter()
   const supabase = createClient()
-
   const [email, setEmail] = useState('')
-  const [msg, setMsg] = useState<string>('')
+  const [msg, setMsg] = useState('')
 
-  const handleLogin = async (e: React.FormEvent) => {
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
     setMsg('Sending magic link...')
 
-    const origin =
-      typeof window !== 'undefined' ? window.location.origin : 'https://wardrobe-mm5f.vercel.app'
+    const origin = window.location.origin
 
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        // THIS IS THE IMPORTANT PART:
+        // IMPORTANT: email link must come back to /auth/callback
         emailRedirectTo: `${origin}/auth/callback`,
       },
     })
 
-    if (error) {
-      setMsg(`Error: ${error.message}`)
-      return
-    }
-
-    setMsg('Check your email and click the link.')
+    if (error) return setMsg(`Error: ${error.message}`)
+    setMsg('Sent! Now click the email link.')
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
-      <form onSubmit={handleLogin} style={{ display: 'grid', gap: 12 }}>
+    <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 24 }}>
+      <form onSubmit={handleLogin} style={{ display: 'grid', gap: 12, width: 320 }}>
+        {/* BIG VERSION LABEL SO WE KNOW WE’RE ON THE NEW DEPLOY */}
+        <div style={{ fontSize: 18, fontWeight: 700, textAlign: 'center' }}>
+          LOGIN PAGE — VERSION V3A
+        </div>
+
         <input
           type="email"
           placeholder="you@email.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
-          style={{ padding: 10, minWidth: 280 }}
+          style={{ padding: 10 }}
         />
-        <button type="submit" style={{ padding: 10 }}>
-          Send Magic Link
+
+        <button type="submit" style={{ padding: 10, fontWeight: 700 }}>
+          SEND MAGIC LINK (V3A)
         </button>
-        {msg ? <div style={{ opacity: 0.8 }}>{msg}</div> : null}
+
+        {msg ? <div style={{ opacity: 0.9, textAlign: 'center' }}>{msg}</div> : null}
       </form>
     </div>
   )
