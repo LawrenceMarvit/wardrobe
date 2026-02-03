@@ -1,54 +1,64 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@/lib/supabaseClient'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
 export default function LoginPage() {
-  const supabase = createClient()
+  const supabase = createClientComponentClient()
   const [email, setEmail] = useState('')
   const [msg, setMsg] = useState('')
 
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault()
-    setMsg('Sending magic link...')
-
-    const origin = window.location.origin
+  const sendMagicLink = async () => {
+    setMsg('Sending...')
 
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        // IMPORTANT: email link must come back to /auth/callback
-        emailRedirectTo: `${origin}/auth/callback`,
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     })
 
-    if (error) return setMsg(`Error: ${error.message}`)
-    setMsg('Sent! Now click the email link.')
+    if (error) {
+      setMsg(error.message)
+    } else {
+      setMsg(
+        `Sent! Check your email. (It should go to: ${window.location.origin}/auth/callback)`
+      )
+    }
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 24 }}>
-      <form onSubmit={handleLogin} style={{ display: 'grid', gap: 12, width: 320 }}>
-        {/* BIG VERSION LABEL SO WE KNOW WE’RE ON THE NEW DEPLOY */}
-        <div style={{ fontSize: 18, fontWeight: 700, textAlign: 'center' }}>
-          LOGIN PAGE — VERSION V3A
-        </div>
-
+    <div
+      style={{
+        minHeight: '100vh',
+        display: 'grid',
+        placeItems: 'center',
+        background: 'black',
+        color: 'white',
+      }}
+    >
+      <div style={{ textAlign: 'center' }}>
         <input
-          type="email"
-          placeholder="you@email.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          required
-          style={{ padding: 10 }}
+          placeholder="you@email.com"
+          style={{
+            padding: '12px',
+            fontSize: '18px',
+            marginBottom: '16px',
+            width: '280px',
+          }}
         />
-
-        <button type="submit" style={{ padding: 10, fontWeight: 700 }}>
-          SEND MAGIC LINK (V3A)
+        <br />
+        <button
+          onClick={sendMagicLink}
+          style={{ padding: '12px 24px', fontSize: '18px' }}
+        >
+          Send Magic Link
         </button>
 
-        {msg ? <div style={{ opacity: 0.9, textAlign: 'center' }}>{msg}</div> : null}
-      </form>
+        <p style={{ marginTop: '20px', opacity: 0.8 }}>{msg}</p>
+      </div>
     </div>
   )
 }
