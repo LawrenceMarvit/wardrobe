@@ -10,7 +10,7 @@ export default function LoginPage() {
 
   const sendMagicLink = async () => {
     setMsg('Sending...')
-
+    
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
@@ -39,25 +39,20 @@ export default function LoginPage() {
     >
       <div style={{ textAlign: 'center' }}>
         <input
+          style={{ padding: 10, fontSize: 18, width: 300 }}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="you@email.com"
-          style={{
-            padding: '12px',
-            fontSize: '18px',
-            marginBottom: '16px',
-            width: '280px',
-          }}
         />
         <br />
+        <br />
         <button
+          style={{ padding: 10, fontSize: 18 }}
           onClick={sendMagicLink}
-          style={{ padding: '12px 24px', fontSize: '18px' }}
         >
           Send Magic Link
         </button>
-
-        <p style={{ marginTop: '20px', opacity: 0.8 }}>{msg}</p>
+        <p style={{ marginTop: 20, opacity: 0.8 }}>{msg}</p>
       </div>
     </div>
   )

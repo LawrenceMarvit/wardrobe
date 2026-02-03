@@ -1,44 +1,42 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url)
   const code = url.searchParams.get('code')
 
-  // If Supabase didn’t send a code, go back to login
+  // If there's no code, we can't exchange for a session
   if (!code) {
-    return NextResponse.redirect(new URL('/login', url.origin))
+    return NextResponse.redirect(new URL('/login?error=no_code', url.origin))
   }
 
-  // We must create a response we can attach cookies to
-  let response = NextResponse.redirect(new URL('/wardrobe', url.origin))
+  // Redirect to /wardrobe AFTER we set cookies on this response
+  const response = NextResponse.redirect(new URL('/wardrobe', url.origin))
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value
+        getAll() {
+          return request.cookies.getAll()
         },
-        set(name: string, value: string, options: any) {
-          response.cookies.set({ name, value, ...options })
-        },
-        remove(name: string, options: any) {
-          response.cookies.set({ name, value: '', ...options })
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options)
+          })
         },
       },
     }
   )
 
-  // This exchanges the "code" for a session + sets auth cookies
   const { error } = await supabase.auth.exchangeCodeForSession(code)
 
-  // If exchange fails, send user back to login
   if (error) {
-    return NextResponse.redirect(new URL('/login', url.origin))
+    return NextResponse.redirect(
+      new URL(`/login?error=${encodeURIComponent(error.message)}`, url.origin)
+    )
   }
 
-  // Success: cookies are set on `response`, and it redirects to /wardrobe
   return response
 }
