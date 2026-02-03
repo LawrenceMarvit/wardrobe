@@ -1,44 +1,48 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { useState } from 'react'
+import { createClient } from '@supabase/supabase-js'
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [sent, setSent] = useState(false);
+  const [email, setEmail] = useState('')
+  const [message, setMessage] = useState('')
 
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault();
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
 
-    const redirectTo = `${window.location.origin}/auth/callback`;
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
 
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: redirectTo,
+        emailRedirectTo: 'https://wardrobe-mm5f.vercel.app/auth/callback',
       },
-    });
+    })
 
-    if (!error) setSent(true);
+    if (error) {
+      setMessage(error.message)
+    } else {
+      setMessage('Magic link sent. Check your email.')
+    }
   }
 
   return (
-    <div style={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
-      {sent ? (
-        <p>Check your email for the login link.</p>
-      ) : (
-        <form onSubmit={handleLogin}>
-          <input
-            type="email"
-            placeholder="you@email.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            style={{ padding: 8, marginRight: 8 }}
-          />
-          <button type="submit">Send Magic Link</button>
-        </form>
-      )}
+    <div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh',flexDirection:'column'}}>
+      <form onSubmit={handleLogin}>
+        <input
+          type="email"
+          placeholder="you@email.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          style={{padding:10,marginRight:10}}
+        />
+        <button type="submit">Send Magic Link</button>
+      </form>
+      <p>{message}</p>
     </div>
-  );
+  )
 }
