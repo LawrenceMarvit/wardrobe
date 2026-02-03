@@ -4,19 +4,31 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
 
-export default function AuthCallback() {
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
+
+export default function Callback() {
   const router = useRouter()
 
   useEffect(() => {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
+    const finishLogin = async () => {
+      const { data, error } = await supabase.auth.exchangeCodeForSession(
+        window.location.href
+      )
 
-    supabase.auth.getSession().then(() => {
+      if (error) {
+        console.error(error)
+        router.push('/login')
+        return
+      }
+
       router.push('/wardrobe')
-    })
+    }
+
+    finishLogin()
   }, [router])
 
-  return <p>Logging you in…</p>
+  return <p style={{ color: 'white' }}>Signing you in...</p>
 }
