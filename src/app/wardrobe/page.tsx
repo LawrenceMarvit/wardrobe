@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function WardrobePage() {
@@ -13,16 +12,19 @@ export default async function WardrobePage() {
 
   return (
     <div>
-      <div>
-        <Link href="/add-item">+ Add Item</Link>
-      </div>
+      <h1>Wardrobe</h1>
+
+      {/* Plain anchor = always clickable */}
+      <p>
+        <a href="/add-item">+ Add Item</a>
+      </p>
 
       <ul>
         {(items ?? []).map((item) => (
           <li key={item.id}>
-            <Link href={`/wardrobe/${item.id}`}>
+            <a href={`/wardrobe/${item.id}`}>
               {item.name} {item.category ? `— ${item.category}` : ""}
-            </Link>
+            </a>
           </li>
         ))}
       </ul>
