@@ -1,42 +1,47 @@
-import { NextResponse, type NextRequest } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
+import { NextRequest, NextResponse } from "next/server";
+import { createServerClient } from "@supabase/ssr";
 
 export async function GET(request: NextRequest) {
-  const url = new URL(request.url)
-  const code = url.searchParams.get('code')
+  const url = new URL(request.url);
 
-  // If there's no code, we can't exchange for a session
-  if (!code) {
-    return NextResponse.redirect(new URL('/login?error=no_code', url.origin))
-  }
+  // Supabase sends ?code=... for PKCE flow
+  const code = url.searchParams.get("code");
 
-  // Redirect to /wardrobe AFTER we set cookies on this response
-  const response = NextResponse.redirect(new URL('/wardrobe', url.origin))
+  // Where to send the user after login
+  const next = url.searchParams.get("next") ?? "/wardrobe";
+  const redirectTo = new URL(next, url.origin);
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            response.cookies.set(name, value, options)
-          })
-        },
+  // We MUST create the response first, so cookies can be set onto it.
+  const response = NextResponse.redirect(redirectTo);
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      get(name) {
+        return request.cookies.get(name)?.value;
       },
+      set(name, value, options) {
+        response.cookies.set({ name, value, ...options });
+      },
+      remove(name, options) {
+        response.cookies.set({ name, value: "", ...options });
+      },
+    },
+  });
+
+  if (code) {
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+    // If exchange fails, go back to login with a hint
+    if (error) {
+      const back = new URL("/login", url.origin);
+      back.searchParams.set("error", "auth_callback_failed");
+      back.searchParams.set("message", error.message);
+      return NextResponse.redirect(back);
     }
-  )
-
-  const { error } = await supabase.auth.exchangeCodeForSession(code)
-
-  if (error) {
-    return NextResponse.redirect(
-      new URL(`/login?error=${encodeURIComponent(error.message)}`, url.origin)
-    )
   }
 
-  return response
+  return response;
 }
