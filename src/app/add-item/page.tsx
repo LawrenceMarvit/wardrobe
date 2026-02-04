@@ -1,157 +1,145 @@
+// ============================================
+// FILE A: REPLACE ENTIRE FILE
+// src/app/add-item/page.tsx
+// ============================================
+
 "use client";
 
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { insertItem, type Confidence } from "@/lib/wardrobeApi";
+import { createBrowserClient } from "@supabase/ssr";
 
 export default function AddItemPage() {
   const router = useRouter();
 
-  const [title, setTitle] = useState("");
+  const supabase = useMemo(() => {
+    return createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+  }, []);
+
+  const [name, setName] = useState("");
   const [category, setCategory] = useState("");
-  const [confidence, setConfidence] = useState<Confidence>("medium");
-  const [isPublic, setIsPublic] = useState(false);
-  const [isLoanable, setIsLoanable] = useState(false);
+  const [confidence, setConfidence] = useState("low");
+  const [isPublic, setIsPublic] = useState(true);
+  const [isLoanable, setIsLoanable] = useState(true);
 
+  const [msg, setMsg] = useState<string>("");
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
+  async function onSave() {
+    setMsg("");
     setSaving(true);
 
     try {
-      const created = await insertItem({
-        title: title.trim(),
+      const { data: sessionData, error: sessErr } = await supabase.auth.getSession();
+      if (sessErr) throw sessErr;
+
+      const userId = sessionData.session?.user?.id;
+      if (!userId) {
+        setMsg("Not logged in. Go back and log in first.");
+        setSaving(false);
+        return;
+      }
+
+      const payload: any = {
+        name: name.trim(),
         category: category.trim(),
         confidence,
-        // ✅ MUST MATCH DATABASE COLUMN NAMES:
         is_public: isPublic,
         is_loanable: isLoanable,
-      });
+        user_id: userId, // if your table doesn't have this column, Supabase will error and we'll show it
+      };
 
-      // Go to details page for the created item
-      router.push(`/wardrobe/${created.id}`);
-    } catch (err: any) {
-      setError(err?.message ?? "Failed to add item");
-      console.error("Insert failed:", err);
+      const { error: insertErr } = await supabase.from("wardrobe_items").insert(payload);
+      if (insertErr) throw insertErr;
+
+      // IMPORTANT: stop redirecting to /wardrobe/[id] (that's what was causing "Item not found")
+      router.replace("/wardrobe");
+      router.refresh();
+    } catch (e: any) {
+      setMsg(e?.message ?? "Save failed");
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <div style={{ maxWidth: 760, margin: "0 auto", padding: 24 }}>
-      <h1 style={{ fontSize: 40, fontWeight: 900, marginBottom: 24 }}>Add Item</h1>
+    <main style={{ padding: 24, maxWidth: 760, margin: "0 auto" }}>
+      <a href="/wardrobe" style={{ textDecoration: "none", opacity: 0.85 }}>
+        ← Back
+      </a>
 
-      <form onSubmit={handleSubmit} style={{ display: "grid", gap: 16 }}>
-        <div>
-          <div style={{ fontWeight: 700, marginBottom: 6 }}>Title</div>
+      <h1 style={{ fontSize: 48, margin: "16px 0 18px" }}>Add Item</h1>
+
+      <div style={{ display: "grid", gap: 12 }}>
+        <label style={{ display: "grid", gap: 6 }}>
+          <div>Name</div>
           <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g. red t shirt"
-            style={{
-              width: "100%",
-              padding: 12,
-              borderRadius: 10,
-              border: "1px solid #333",
-              background: "transparent",
-              color: "white",
-            }}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g. Blue Jacket"
+            style={{ padding: 12, borderRadius: 12, border: "1px solid rgba(255,255,255,0.25)", background: "transparent", color: "inherit" }}
           />
-        </div>
+        </label>
 
-        <div>
-          <div style={{ fontWeight: 700, marginBottom: 6 }}>Category</div>
+        <label style={{ display: "grid", gap: 6 }}>
+          <div>Category</div>
           <input
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            placeholder="e.g. shirt"
-            style={{
-              width: "100%",
-              padding: 12,
-              borderRadius: 10,
-              border: "1px solid #333",
-              background: "transparent",
-              color: "white",
-            }}
+            placeholder="e.g. Outerwear"
+            style={{ padding: 12, borderRadius: 12, border: "1px solid rgba(255,255,255,0.25)", background: "transparent", color: "inherit" }}
           />
-        </div>
+        </label>
 
-        <div>
-          <div style={{ fontWeight: 700, marginBottom: 6 }}>Confidence</div>
+        <label style={{ display: "grid", gap: 6 }}>
+          <div>Confidence</div>
           <select
             value={confidence}
-            onChange={(e) => setConfidence(e.target.value as Confidence)}
-            style={{
-              width: "100%",
-              padding: 12,
-              borderRadius: 10,
-              border: "1px solid #333",
-              background: "transparent",
-              color: "white",
-            }}
+            onChange={(e) => setConfidence(e.target.value)}
+            style={{ padding: 12, borderRadius: 12, border: "1px solid rgba(255,255,255,0.25)", background: "black", color: "inherit" }}
           >
             <option value="low">low</option>
             <option value="medium">medium</option>
             <option value="high">high</option>
           </select>
-        </div>
-
-        <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <input
-            type="checkbox"
-            checked={isPublic}
-            onChange={(e) => setIsPublic(e.target.checked)}
-          />
-          <span>Public</span>
         </label>
 
-        <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <input
-            type="checkbox"
-            checked={isLoanable}
-            onChange={(e) => setIsLoanable(e.target.checked)}
-          />
-          <span>Loanable</span>
+        <label style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <input type="checkbox" checked={isPublic} onChange={(e) => setIsPublic(e.target.checked)} />
+          Public
         </label>
 
-        {error && (
-          <div
-            style={{
-              background: "rgba(255,0,0,0.12)",
-              border: "1px solid rgba(255,0,0,0.35)",
-              padding: 12,
-              borderRadius: 10,
-              color: "#ff6b6b",
-              whiteSpace: "pre-wrap",
-            }}
-          >
-            {error}
-          </div>
-        )}
+        <label style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <input type="checkbox" checked={isLoanable} onChange={(e) => setIsLoanable(e.target.checked)} />
+          Loanable
+        </label>
 
         <button
-          type="submit"
+          type="button"
+          onClick={onSave}
           disabled={saving}
           style={{
-            padding: "14px 16px",
-            borderRadius: 12,
-            border: "1px solid #333",
+            marginTop: 8,
+            padding: "12px 16px",
+            borderRadius: 14,
+            border: "1px solid rgba(255,255,255,0.25)",
             background: "transparent",
-            color: "white",
-            fontSize: 18,
-            fontWeight: 800,
-            cursor: saving ? "not-allowed" : "pointer",
-            opacity: saving ? 0.6 : 1,
-            marginTop: 6,
+            color: "inherit",
+            cursor: saving ? "default" : "pointer",
           }}
         >
-          {saving ? "Saving..." : "Save"}
+          {saving ? "Saving..." : "Save Item"}
         </button>
-      </form>
-    </div>
+
+        {msg && (
+          <div style={{ padding: 12, border: "1px solid rgba(255,100,100,0.8)", borderRadius: 12 }}>
+            {msg}
+          </div>
+        )}
+      </div>
+    </main>
   );
 }
