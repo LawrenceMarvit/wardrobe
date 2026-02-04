@@ -1,82 +1,50 @@
-"use client";
-
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
-import { getItemById, type ClothingItem } from "@/lib/wardrobeStore";
+import { cookies } from "next/headers";
+import { createServerClient } from "@supabase/ssr";
 
-export default function WardrobeItemPage() {
-  const params = useParams<{ id: string }>();
-  const id = useMemo(
-    () => (params?.id ? decodeURIComponent(params.id) : ""),
-    [params]
-  );
-
-  const [item, setItem] = useState<ClothingItem | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function run() {
-      try {
-        setLoading(true);
-        setError(null);
-
-        if (!id) {
-          throw new Error("Missing item id in route.");
-        }
-
-        const found = await getItemById(id);
-
-        if (!cancelled) {
-          setItem(found ?? null);
-        }
-      } catch (e: any) {
-        if (!cancelled) {
-          setError(e?.message ?? "Failed to load item.");
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
+function supabaseServer() {
+  const cookieStore = cookies();
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+        set() {},
+        remove() {},
+      },
     }
+  );
+}
 
-    run();
+export default async function WardrobeItemPage({ params }: { params: { id: string } }) {
+  const supabase = supabaseServer();
 
-    return () => {
-      cancelled = true;
-    };
-  }, [id]);
+  const { data, error } = await supabase
+    .from("wardrobe_items")
+    .select("*")
+    .eq("id", params.id)
+    .single();
+
+  if (error) {
+    return (
+      <div style={{ padding: 40 }}>
+        <h1>Item load failed</h1>
+        <div>Error: {error.message}</div>
+        <Link href="/wardrobe">Back</Link>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ padding: 24, maxWidth: 900, margin: "0 auto" }}>
-      <Link href="/wardrobe" style={{ textDecoration: "none" }}>
-        ← Back
-      </Link>
-
-      {loading && <p style={{ marginTop: 16 }}>Loading…</p>}
-
-      {!loading && error && (
-        <p style={{ marginTop: 16, color: "crimson" }}>{error}</p>
-      )}
-
-      {!loading && !error && !item && (
-        <p style={{ marginTop: 16 }}>Item not found.</p>
-      )}
-
-      {!loading && !error && item && (
-        <>
-          <h1 style={{ marginTop: 16 }}>Item</h1>
-          <div style={{ marginTop: 12 }}>
-            <pre style={{ whiteSpace: "pre-wrap" }}>
-              {JSON.stringify(item, null, 2)}
-            </pre>
-          </div>
-        </>
-      )}
+    <div style={{ padding: 40 }}>
+      <h1>{data.name}</h1>
+      <div>Category: {data.category}</div>
+      <div>Confidence: {data.confidence}</div>
+      <div>ID: {data.id}</div>
+      <Link href="/wardrobe">Back</Link>
     </div>
   );
 }
