@@ -5,7 +5,7 @@ export default function AddItemPage() {
   async function createItem(formData: FormData) {
     "use server";
 
-    const supabase = createClient();
+    const supabase = await createClient();
 
     const name = String(formData.get("name") ?? "").trim();
     const category = String(formData.get("category") ?? "").trim();
