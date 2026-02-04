@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "../../lib/supabase/server";
 
 export default function AddItemPage() {
   async function createItem(formData: FormData) {
     "use server";
 
-    const supabase = await createClient();
+    const supabase = createClient();
 
     const name = String(formData.get("name") ?? "").trim();
     const category = String(formData.get("category") ?? "").trim();
@@ -16,21 +16,11 @@ export default function AddItemPage() {
 
     const { data, error } = await supabase
       .from("wardrobe_items")
-      .insert([
-        {
-          name,
-          category,
-          confidence,
-          is_public,
-          is_loanable,
-        },
-      ])
+      .insert([{ name, category, confidence, is_public, is_loanable }])
       .select("id")
       .single();
 
-    if (error) {
-      throw new Error(error.message);
-    }
+    if (error) throw new Error(error.message);
 
     redirect(`/wardrobe/${data.id}`);
   }
