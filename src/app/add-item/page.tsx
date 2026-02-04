@@ -7,22 +7,18 @@ export default function AddItemPage() {
 
     const supabase = await createClient();
 
-    const title = String(formData.get("name") ?? "").trim();
+    const name = String(formData.get("name") ?? "").trim();
     const category = String(formData.get("category") ?? "").trim();
     const confidence = String(formData.get("confidence") ?? "").trim();
 
     const is_public = formData.get("is_public") === "on";
     const is_loanable = formData.get("is_loanable") === "on";
 
-    if (!title) {
-      redirect("/add-item");
-    }
-
     const { data, error } = await supabase
       .from("wardrobe_items")
       .insert([
         {
-          title,
+          name,
           category,
           confidence,
           is_public,

@@ -1,33 +1,31 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 
-export default async function WardrobeItemPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default async function WardrobePage() {
   const supabase = await createClient();
 
-  const { data: item, error } = await supabase
+  const { data: items, error } = await supabase
     .from("wardrobe_items")
-    .select("id, title, category, confidence, is_public, is_loanable, created_at, user_id")
-    .eq("id", params.id)
-    .single();
+    .select("id, name, category, created_at")
+    .order("created_at", { ascending: false });
 
-  if (error) {
-    return (
-      <div>
-        <p>Item not found</p>
-        <Link href="/wardrobe">Back</Link>
-      </div>
-    );
-  }
+  if (error) throw new Error(error.message);
 
   return (
     <div>
-      <Link href="/wardrobe">Back</Link>
-      <h1>{item.title}</h1>
-      <pre>{JSON.stringify(item, null, 2)}</pre>
+      <div>
+        <Link href="/add-item">+ Add Item</Link>
+      </div>
+
+      <ul>
+        {(items ?? []).map((item) => (
+          <li key={item.id}>
+            <Link href={`/wardrobe/${item.id}`}>
+              {item.name} {item.category ? `— ${item.category}` : ""}
+            </Link>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
